@@ -12,6 +12,14 @@
 	],
 	"Plugins": [
 		{
+			"Name": "PunchOutCore",
+			"Enabled": true
+		},
+		{
+			"Name": "ModelViewViewModel",
+			"Enabled": true
+		},
+		{
 			"Name": "ModelingToolsEditorMode",
 			"Enabled": true,
 			"TargetAllowList": [
@@ -24,6 +32,10 @@
 		},
 		{
 			"Name": "AllToolsets",
+			"Enabled": true
+		},
+		{
+			"Name": "MVVMToolset",
 			"Enabled": true
 		}
 	]
