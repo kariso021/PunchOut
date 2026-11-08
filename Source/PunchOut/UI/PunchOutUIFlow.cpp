@@ -2,12 +2,16 @@
 
 #include "PunchOutUIView.h"
 #include "PunchOutViewModel.h"
+#include "Abilities/PunchOutPunchAbility.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
 #include "Player/PunchOutPlayerState.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "Engine/Engine.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/Character.h"
+#include "GameMapsSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
@@ -94,6 +98,43 @@ void APunchOutUIPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 	InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ThisClass::ToggleMenu);
+	InputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &ThisClass::Punch);
+}
+
+void APunchOutUIPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+	if (const auto* Provider = Cast<IAbilitySystemInterface>(PlayerState))
+	{
+		if (UAbilitySystemComponent* ASC = Provider->GetAbilitySystemComponent())
+		{
+			if (!ASC->FindAbilitySpecFromClass(UPunchOutPunchAbility::StaticClass()))
+				ASC->GiveAbility(FGameplayAbilitySpec(UPunchOutPunchAbility::StaticClass()));
+		}
+	}
+}
+
+void APunchOutUIPlayerController::Punch()
+{
+	if (!ViewModel || ViewModel->Screen != EPunchOutScreen::Playing) return;
+	if (const auto* Provider = Cast<IAbilitySystemInterface>(GetPawn()))
+	{
+		if (UAbilitySystemComponent* ASC = Provider->GetAbilitySystemComponent())
+			ASC->TryActivateAbilityByClass(UPunchOutPunchAbility::StaticClass());
+	}
+}
+
+void APunchOutUIPlayerController::OnUnPossess()
+{
+	if (const auto* Provider = Cast<IAbilitySystemInterface>(PlayerState))
+	{
+		if (UAbilitySystemComponent* ASC = Provider->GetAbilitySystemComponent())
+		{
+			if (const FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(UPunchOutPunchAbility::StaticClass()))
+				ASC->CancelAbilityHandle(Spec->Handle);
+		}
+	}
+	Super::OnUnPossess();
 }
 
 void APunchOutUIPlayerController::PlayerTick(float DeltaTime)
@@ -160,7 +201,7 @@ void APunchOutUIPlayerController::HostGame()
 	if (ViewModel->Screen != EPunchOutScreen::MainMenu || ViewModel->IsConnecting) return;
 	ViewModel->SetIsConnecting(true);
 	GetGameInstance<UPunchOutGameInstance>()->ShowMainMenu = false;
-	UGameplayStatics::OpenLevel(this, TEXT("/Game/Levels/L_OfficePrototype"), true, TEXT("listen"));
+	UGameplayStatics::OpenLevel(this, FName(*UGameMapsSettings::GetGameDefaultMap()), true, TEXT("listen"));
 }
 
 void APunchOutUIPlayerController::JoinGame(const FString& Address)
@@ -199,7 +240,7 @@ void APunchOutUIPlayerController::ResumeGame()
 void APunchOutUIPlayerController::LeaveGame()
 {
 	GetGameInstance<UPunchOutGameInstance>()->ShowMainMenu = true;
-	UGameplayStatics::OpenLevel(this, TEXT("/Game/Levels/L_OfficePrototype"));
+	UGameplayStatics::OpenLevel(this, FName(*UGameMapsSettings::GetGameDefaultMap()));
 }
 
 void APunchOutUIPlayerController::ReportConnectionFailure(const FString& Message)

@@ -1,5 +1,9 @@
 # PunchOut
-Punch out of fucking Company
+Punch Out of Who You Were.
+
+## Learning alongside development
+
+Story milestones, ownership decisions, CS/graphics experiments, and verification evidence are tracked in [the learning checklist](artifacts/punchout-learning-checklist.md). Implementation completion and learning completion are recorded separately.
 
 ## GAS foundation
 
@@ -7,14 +11,22 @@ Punch out of fucking Company
 
 Verified: Editor build, Blueprint compilation/default preservation, and `PunchOut.Core.AvatarOwnership` automation test. Combat features, Experience loading, ability grants/input, and network PIE validation remain pending. The architecture and progress are recorded in `artifacts/punchout-lyra-gas-design.md`.
 
-## Office prototype
+## Mountain gate prototype
 
-Open `/Game/Levels/L_OfficePrototype` and press Play. This is also the default startup map.
+### Punch prototype
+
+During Playing (after starting the match), left-click requests a server-only GAS punch. The sphere sweep follows horizontal controller aim from the Pawn center + 20 cm vertically: 140 cm travel, 20 cm radius (160 cm maximum tip reach), first Visibility blocker only. Green/red capsules show miss/hit and a yellow point marks contact on the server/standalone viewport. This is an initial tuning choice, not PUBG's actual implementation or values.
+
+`Plugins/PunchOutCombat/Source/PunchOutCombat/Private/Abilities/PunchOutPunchAbility.cpp` contains the query. Defaults are in its public header. Recovery is 0.45 s; repeated activation is blocked while active and unpossession cancels recovery. Damage uses the prototype `ApplyPointDamage` bridge (10 damage); there is no HealthSet, damage GameplayEffect, punch montage, hit-timing notify, prediction, or lag compensation yet. Ordinary scenery will block a punch but will not lose health unless it implements damage handling. This Combat plugin is currently always loaded; Experience/Game Feature activation remains pending.
+
+Validation on 2026-11-04: Editor build succeeded after closing Unreal Editor. `PunchOut.Combat.PunchRange` passed (front hit, side/behind/out-of-range misses, wall blocking), as did `PunchOut.Core.AvatarOwnership`. Interactive input/animation feel and network validation remain pending. The pre-existing GameFeatureData Asset Manager scan error remains unrelated to this always-loaded prototype module.
+
+Open `/Game/Levels/L_MountainGate` and press Play. This is the default startup and game map.
 
 - WASD: move; mouse: rotate the third-person camera; Space: jump.
-- Click the play viewport to capture input. Shift+F1 releases the mouse; Esc stops play.
-- The office uses basic shapes, 5 m walls, desks, partitions, a meeting area, storage, and an open exit.
-- The character and movement animations use Unreal Engine 5.8's Third Person template assets.
-- For a local network test, set Number of Players to 2 and Net Mode to Play As Listen Server in Play settings.
+- The cultivation-world blockout contains a sealed sect gate, a training court, a descending stone path, pines, and distant mountain peaks.
+- Geometry and materials are placeholders; the character uses the existing Third Person template.
+- The office map has been removed. Office character/animation assets remain for compatibility with existing references.
+- Map generation and validation scripts live in `Scripts/`. Run the build script only when intentionally rebuilding the blockout.
 
-Verified: character/controller/game mode Blueprint compilation, two-player PIE connection, server-to-client character position replication, and office collision traces. Matchmaking and escape rules are not implemented yet.
+Verification: map saved by Unreal Editor commandlet. Interactive play and visual lighting review remain pending.

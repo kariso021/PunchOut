@@ -12,6 +12,10 @@
 	],
 	"Plugins": [
 		{
+			"Name": "PunchOutCombat",
+			"Enabled": true
+		},
+		{
 			"Name": "PunchOutCore",
 			"Enabled": true
 		},

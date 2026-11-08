@@ -52,12 +52,15 @@ public:
 	void ReportConnectionFailure(const FString& Message);
 protected:
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnUnPossess() override;
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
 private:
 	void RefreshViewModel();
 	void ApplyInputState();
 	void ToggleMenu();
+	void Punch();
 	void HostGame();
 	void JoinGame(const FString& Address);
 	void StartGame();
