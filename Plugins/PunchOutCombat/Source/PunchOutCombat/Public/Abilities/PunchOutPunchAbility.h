@@ -12,6 +12,7 @@ class PUNCHOUTCOMBAT_API UPunchOutPunchAbility : public UGameplayAbility
 	GENERATED_BODY()
 public:
 	UPunchOutPunchAbility();
+	void QueueFollowUp();
 	// Returns the first blocking hit. Direction is horizontal controller aim.
 	static bool FindPunchHit(APawn* Pawn, float Reach, float Radius, FHitResult& Hit, bool bDraw);
 protected:
@@ -29,6 +30,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Punch")
 	bool bDrawRange = true;
 private:
+	void ExecutePunch(APawn* Pawn);
 	UFUNCTION()
-	void FinishPunch();
+	void FinishRecovery();
+
+	static constexpr int32 MaxComboHits = 3;
+	int32 ComboHit = 0;
+	bool bFollowUpQueued = false;
 };

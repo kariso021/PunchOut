@@ -14,7 +14,7 @@ enum class EPunchOutScreen : uint8
 };
 
 UCLASS()
-class PUNCHOUT_API UPunchOutViewModel : public UMVVMViewModelBase
+class PUNCHOUTFRONTEND_API UPunchOutViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 

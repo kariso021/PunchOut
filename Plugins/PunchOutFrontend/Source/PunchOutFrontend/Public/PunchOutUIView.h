@@ -14,11 +14,15 @@ class UVerticalBox;
 class UWidgetSwitcher;
 
 UCLASS()
-class PUNCHOUT_API UPunchOutUIView : public UUserWidget
+class PUNCHOUTFRONTEND_API UPunchOutUIView : public UUserWidget
 {
 	GENERATED_BODY()
 public:
 	void SetViewModel(UPunchOutViewModel* Model);
+	UPunchOutViewModel* GetDisplayViewModel() const;
+#if WITH_EDITOR
+	void SetDebugViewModel(UPunchOutViewModel* Model);
+#endif
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 	virtual void NativeConstruct() override;
@@ -28,6 +32,7 @@ private:
 	UTextBlock* AddLabel(UVerticalBox* Panel, const FString& Text, int32 Size = 18);
 	UButton* AddButton(UVerticalBox* Panel, const FString& Text);
 	void Refresh();
+	void BindDisplayViewModel();
 	void OnFieldChanged(UObject* Object, UE::FieldNotification::FFieldId Field);
 	UFUNCTION() void Host();
 	UFUNCTION() void Join();
@@ -35,6 +40,9 @@ private:
 	UFUNCTION() void Resume();
 	UFUNCTION() void Leave();
 	UPROPERTY(Transient) TObjectPtr<UPunchOutViewModel> ViewModel;
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(Transient) TObjectPtr<UPunchOutViewModel> DebugViewModel;
+#endif
 	UPROPERTY(Transient) TObjectPtr<UBorder> MenuFrame;
 	UPROPERTY(Transient) TObjectPtr<UWidgetSwitcher> Panels;
 	UPROPERTY(Transient) TObjectPtr<UEditableTextBox> Address;

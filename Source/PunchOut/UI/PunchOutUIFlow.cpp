@@ -117,10 +117,31 @@ void APunchOutUIPlayerController::OnPossess(APawn* InPawn)
 void APunchOutUIPlayerController::Punch()
 {
 	if (!ViewModel || ViewModel->Screen != EPunchOutScreen::Playing) return;
-	if (const auto* Provider = Cast<IAbilitySystemInterface>(GetPawn()))
+	if (APawn* PunchingPawn = GetPawn())
 	{
-		if (UAbilitySystemComponent* ASC = Provider->GetAbilitySystemComponent())
-			ASC->TryActivateAbilityByClass(UPunchOutPunchAbility::StaticClass());
+		ServerPunch(PunchingPawn);
+	}
+}
+
+void APunchOutUIPlayerController::ServerPunch_Implementation(APawn* PunchingPawn)
+{
+	const auto* State = GetWorld()->GetGameState<APunchOutGameState>();
+	if (!State || !State->MatchStarted || !PunchingPawn || PunchingPawn != GetPawn()) return;
+
+	const auto* Provider = Cast<IAbilitySystemInterface>(PunchingPawn);
+	UAbilitySystemComponent* ASC = Provider ? Provider->GetAbilitySystemComponent() : nullptr;
+	if (!ASC || ASC->GetAvatarActor() != PunchingPawn) return;
+
+	const FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(UPunchOutPunchAbility::StaticClass());
+	if (!Spec) return;
+
+	if (Spec->IsActive())
+	{
+		CastChecked<UPunchOutPunchAbility>(Spec->GetPrimaryInstance())->QueueFollowUp();
+	}
+	else
+	{
+		ASC->TryActivateAbility(Spec->Handle);
 	}
 }
 

@@ -42,6 +42,22 @@ void UPunchOutPunchAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+
+	ComboHit = 1;
+	bFollowUpQueued = false;
+	ExecutePunch(Pawn);
+}
+
+void UPunchOutPunchAbility::QueueFollowUp()
+{
+	if (IsActive() && ComboHit < MaxComboHits)
+	{
+		bFollowUpQueued = true;
+	}
+}
+
+void UPunchOutPunchAbility::ExecutePunch(APawn* Pawn)
+{
 	FHitResult Hit;
 	if (FindPunchHit(Pawn, Reach, Radius, Hit, bDrawRange))
 	{
@@ -49,13 +65,26 @@ void UPunchOutPunchAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		UGameplayStatics::ApplyPointDamage(Hit.GetActor(), Damage, (Hit.TraceEnd - Hit.TraceStart).GetSafeNormal(),
 			Hit, Pawn->GetController(), Pawn, nullptr);
 	}
-	// Keep this ability active during recovery so repeated clicks cannot retrigger it.
+	if (!IsActive())
+	{
+		return;
+	}
+
 	UAbilityTask_WaitDelay* Recovery = UAbilityTask_WaitDelay::WaitDelay(this, RecoverySeconds);
-	Recovery->OnFinish.AddDynamic(this, &ThisClass::FinishPunch);
+	Recovery->OnFinish.AddDynamic(this, &ThisClass::FinishRecovery);
 	Recovery->ReadyForActivation();
 }
 
-void UPunchOutPunchAbility::FinishPunch()
+void UPunchOutPunchAbility::FinishRecovery()
 {
+	APawn* Pawn = Cast<APawn>(CurrentActorInfo->AvatarActor.Get());
+	if (bFollowUpQueued && Pawn)
+	{
+		bFollowUpQueued = false;
+		++ComboHit;
+		ExecutePunch(Pawn);
+		return;
+	}
+
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }

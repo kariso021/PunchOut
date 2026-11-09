@@ -100,21 +100,49 @@ void UPunchOutUIView::SetViewModel(UPunchOutViewModel* Model)
 	ViewModel = Model;
 }
 
+UPunchOutViewModel* UPunchOutUIView::GetDisplayViewModel() const
+{
+#if WITH_EDITOR
+	if (DebugViewModel) return DebugViewModel;
+#endif
+	return ViewModel;
+}
+
+#if WITH_EDITOR
+void UPunchOutUIView::SetDebugViewModel(UPunchOutViewModel* Model)
+{
+	if (DebugViewModel == Model) return;
+	GetDisplayViewModel()->RemoveAllFieldValueChangedDelegates(this);
+	DebugViewModel = Model;
+	if (GetCachedWidget().IsValid())
+	{
+		BindDisplayViewModel();
+		Refresh();
+	}
+}
+#endif
+
 void UPunchOutUIView::NativeConstruct()
 {
 	Super::NativeConstruct();
 	SetIsFocusable(true);
-	ViewModel->GetFieldNotificationDescriptor().ForEachField(ViewModel->GetClass(), [this](UE::FieldNotification::FFieldId Field)
+	BindDisplayViewModel();
+	Refresh();
+}
+
+void UPunchOutUIView::BindDisplayViewModel()
+{
+	auto* Model = GetDisplayViewModel();
+	Model->GetFieldNotificationDescriptor().ForEachField(Model->GetClass(), [this, Model](UE::FieldNotification::FFieldId Field)
 	{
-		ViewModel->AddFieldValueChangedDelegate(Field, INotifyFieldValueChanged::FFieldValueChangedDelegate::CreateUObject(this, &ThisClass::OnFieldChanged));
+		Model->AddFieldValueChangedDelegate(Field, INotifyFieldValueChanged::FFieldValueChangedDelegate::CreateUObject(this, &ThisClass::OnFieldChanged));
 		return true;
 	});
-	Refresh();
 }
 
 void UPunchOutUIView::NativeDestruct()
 {
-	if (ViewModel) ViewModel->RemoveAllFieldValueChangedDelegates(this);
+	if (auto* Model = GetDisplayViewModel()) Model->RemoveAllFieldValueChangedDelegates(this);
 	Super::NativeDestruct();
 }
 
@@ -125,18 +153,19 @@ void UPunchOutUIView::OnFieldChanged(UObject* Object, UE::FieldNotification::FFi
 
 void UPunchOutUIView::Refresh()
 {
-	if (!Panels || !ViewModel) return;
-	const bool Playing = ViewModel->Screen == EPunchOutScreen::Playing;
+	const auto* Model = GetDisplayViewModel();
+	if (!Panels || !Model) return;
+	const bool Playing = Model->Screen == EPunchOutScreen::Playing;
 	MenuFrame->SetVisibility(Playing ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
 	HUDText->SetVisibility(Playing ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
-	Panels->SetActiveWidgetIndex(ViewModel->Screen == EPunchOutScreen::Lobby ? 1 : ViewModel->Screen == EPunchOutScreen::PauseMenu ? 2 : 0);
-	StatusText->SetText(ViewModel->Status);
-	HostButton->SetIsEnabled(!ViewModel->IsConnecting);
-	JoinButton->SetIsEnabled(!ViewModel->IsConnecting);
-	CancelButton->SetVisibility(ViewModel->IsConnecting ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-	LobbyText->SetText(FText::FromString(FString::Printf(TEXT("Players: %d\n%s"), ViewModel->PlayerCount, ViewModel->IsHost ? TEXT("You are the host. Start when everyone is here.") : TEXT("Waiting for the host to start."))));
-	StartButton->SetVisibility(ViewModel->IsHost ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-	HUDText->SetText(FText::FromString(FString::Printf(TEXT("PUNCH OUT  |  Players: %d  |  %s\nWASD: Move    Mouse: Look    Space: Jump    Esc: Menu"), ViewModel->PlayerCount, *ViewModel->Posture.ToString())));
+	Panels->SetActiveWidgetIndex(Model->Screen == EPunchOutScreen::Lobby ? 1 : Model->Screen == EPunchOutScreen::PauseMenu ? 2 : 0);
+	StatusText->SetText(Model->Status);
+	HostButton->SetIsEnabled(!Model->IsConnecting);
+	JoinButton->SetIsEnabled(!Model->IsConnecting);
+	CancelButton->SetVisibility(Model->IsConnecting ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	LobbyText->SetText(FText::FromString(FString::Printf(TEXT("Players: %d\n%s"), Model->PlayerCount, Model->IsHost ? TEXT("You are the host. Start when everyone is here.") : TEXT("Waiting for the host to start."))));
+	StartButton->SetVisibility(Model->IsHost ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	HUDText->SetText(FText::FromString(FString::Printf(TEXT("PUNCH OUT  |  Players: %d  |  %s\nWASD: Move    Mouse: Look    Space: Jump    Esc: Menu"), Model->PlayerCount, *Model->Posture.ToString())));
 }
 
 FReply UPunchOutUIView::NativeOnKeyDown(const FGeometry& Geometry, const FKeyEvent& Event)

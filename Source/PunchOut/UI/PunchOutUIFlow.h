@@ -61,6 +61,8 @@ private:
 	void ApplyInputState();
 	void ToggleMenu();
 	void Punch();
+	UFUNCTION(Server, Reliable)
+	void ServerPunch(APawn* PunchingPawn);
 	void HostGame();
 	void JoinGame(const FString& Address);
 	void StartGame();

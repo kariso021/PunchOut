@@ -20,6 +20,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "PunchOutFrontend",
+			"Enabled": true
+		},
+		{
 			"Name": "ModelViewViewModel",
 			"Enabled": true
 		},

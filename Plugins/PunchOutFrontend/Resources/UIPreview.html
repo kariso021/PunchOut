@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PunchOut UI Preview</title>
+  <style>
+    :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; }
+    body { margin: 0; background: #11191f; color: #eff4f7; }
+    main { max-width: 36rem; margin: 3rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 0.25rem; }
+    p { color: #aebdc6; }
+    form { display: grid; gap: 1rem; margin-top: 1.5rem; padding: 1.5rem; border: 1px solid #394750; border-radius: 0.75rem; background: #1a252e; }
+    label { display: grid; gap: 0.25rem; }
+    .row { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+    .row label { display: flex; align-items: center; }
+    input, select, button { font: inherit; }
+    input:not([type=checkbox]), select, button { padding: 0.45rem 0.65rem; border: 1px solid #59666f; border-radius: 0.35rem; }
+    button { cursor: pointer; }
+    button[type=submit] { background: #f2a044; color: #18100a; border-color: #f2a044; font-weight: 600; }
+    output { min-height: 1.5em; }
+    output[data-error] { color: #ffad9b; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>PunchOut UI Preview</h1>
+    <p>Press Play in Unreal Editor to edit the running game UI. When PIE is stopped, open PunchOut UI Preview to test sample data in its own tab.</p>
+    <form>
+      <label>Screen
+        <select name="screen">
+          <option value="MainMenu">Main menu</option>
+          <option value="Lobby">Lobby</option>
+          <option value="Playing">HUD</option>
+          <option value="PauseMenu">Pause menu</option>
+        </select>
+      </label>
+      <label>Player count <input name="playerCount" type="number" min="0" max="999" required></label>
+      <div class="row">
+        <label><input name="isHost" type="checkbox"> Host</label>
+        <label><input name="isConnecting" type="checkbox"> Connecting</label>
+      </div>
+      <label>Status text <input name="status" maxlength="256"></label>
+      <label>HUD posture <input name="posture" maxlength="128"></label>
+      <div class="row">
+        <button type="submit">Apply</button>
+        <button type="button" id="reset">Reset</button>
+      </div>
+      <output role="status"></output>
+    </form>
+  </main>
+  <script>
+    const form = document.querySelector('form');
+    const fields = form.elements;
+    const output = document.querySelector('output');
+    async function sync(method = 'GET', state) {
+      output.removeAttribute('data-error');
+      output.textContent = 'Connecting to Unreal…';
+      for (const button of form.querySelectorAll('button')) button.disabled = true;
+      try {
+        const options = { method, cache: 'no-store' };
+        if (state) {
+          options.headers = { 'Content-Type': 'application/json' };
+          options.body = JSON.stringify(state);
+        }
+        const response = await fetch('/punchout-ui/state', options);
+        if (response.status === 409) throw new Error('Start Play in Editor or open PunchOut UI Preview, then reload this page.');
+        if (!response.ok) throw new Error('Preview request failed (' + response.status + ').');
+        const { target, ...values } = await response.json();
+        for (const [name, value] of Object.entries(values)) {
+          if (typeof value === 'boolean') fields[name].checked = value;
+          else fields[name].value = value;
+        }
+        const label = target === 'live' ? 'Live game UI' : 'Editor preview';
+        output.textContent = label + (method === 'POST' ? ' · Applied' : method === 'DELETE' ? ' · Reset' : ' · Connected');
+      } catch (error) {
+        output.setAttribute('data-error', '');
+        output.textContent = error.message;
+      } finally {
+        for (const button of form.querySelectorAll('button')) button.disabled = false;
+      }
+    }
+
+    fields.playerCount.value = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      sync('POST', {
+        screen: fields.screen.value,
+        playerCount: fields.playerCount.valueAsNumber,
+        isHost: fields.isHost.checked,
+        isConnecting: fields.isConnecting.checked,
+        status: fields.status.value,
+        posture: fields.posture.value
+      });
+    });
+    document.querySelector('#reset').addEventListener('click', () => sync('DELETE'));
+    sync();
+  </script>
+</body>
+</html>
