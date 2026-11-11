@@ -8,9 +8,17 @@ Open [PunchOut.uproject](PunchOut.uproject) in Unreal Engine 5.8, press Play, th
 - WASD to move, mouse to look, Space to jump, left-click to punch.
 - In the host viewport, a green outline marks a missed punch, a red outline marks a collision, and a yellow point shows contact. Punch animation is pending.
 
-## Frontend UI preview
+## Runtime Debug Toolkit
 
-Press **Play** in Unreal Editor, then open [the local control panel](http://127.0.0.1:8088/punchout-ui). **Apply** updates the running game's UI, and **Reset** restores the display driven by the game. To work without starting a game, open **PunchOut UI Preview** from the Window menu or enter `PunchOut.UIDebug` in the Output Log command field.
+Press **Play** in Unreal Editor, then open [the local control panel](http://127.0.0.1:8088/punchout-ui).
+
+- **UMG Hierarchy** lists the active game widgets and supports name/class search.
+- **Widget Inspector** shows geometry, transforms, and reflected properties. Select **Allow display property edits** to change visibility, enabled state, and opacity. **Highlight in game** draws the selected widget's cached bounds.
+- **UI State** applies sample ViewModel values to the running game's UI. **Reset to game state** restores the game-driven ViewModel. JSON import previews the change and asks for confirmation.
+- **Performance** samples application frame time and process memory and exports CSV.
+- **Input & Events** records game viewport Slate input handlers/results and web UI changes in a 256-entry buffer.
+
+Use the category menus to reopen closed windows. Drag window titles to reorder and resize each window from its corner. The browser remembers window order, size, and visibility. To work without starting a game, open **PunchOut UI Preview** from the Window menu or enter `PunchOut.UIDebug` in the Output Log command field. Widget inspection targets PIE.
 
 ## Source and tests
 

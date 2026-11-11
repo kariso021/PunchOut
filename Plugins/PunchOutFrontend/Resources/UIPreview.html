@@ -3,98 +3,472 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PunchOut UI Preview</title>
+  <title>Runtime Debug Toolkit</title>
   <style>
-    :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; }
-    body { margin: 0; background: #11191f; color: #eff4f7; }
-    main { max-width: 36rem; margin: 3rem auto; padding: 0 1rem; }
-    h1 { margin-bottom: 0.25rem; }
-    p { color: #aebdc6; }
-    form { display: grid; gap: 1rem; margin-top: 1.5rem; padding: 1.5rem; border: 1px solid #394750; border-radius: 0.75rem; background: #1a252e; }
-    label { display: grid; gap: 0.25rem; }
-    .row { display: flex; gap: 1.25rem; flex-wrap: wrap; }
-    .row label { display: flex; align-items: center; }
+    :root { color-scheme: dark; font: 14px/1.5 system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #11171d; color: #e5edf4; }
+    header { padding: 16px 24px; border-bottom: 1px solid #34414d; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+    h1 { font-size: 20px; margin: 0; }
+    #connection { color: #a8b9c7; }
+    nav { display: flex; gap: 8px; padding: 8px 24px; background: #1a242e; }
+    nav details { position: relative; }
+    nav summary { padding: 6px 12px; cursor: pointer; }
+    nav details > div { position: absolute; z-index: 3; min-width: 200px; padding: 8px; background: #253340; border: 1px solid #526270; }
+    nav button { display: block; width: 100%; text-align: left; margin: 4px 0; }
+    .workspace { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; padding: 16px 24px; }
+    .window { width: calc(50% - 8px); height: 530px; min-width: 290px; min-height: 200px; max-width: 100%; resize: both; overflow: auto; background: #1a242e; border: 1px solid #344858; border-radius: 6px; }
+    .window[hidden] { display: none; }
+    .window > h2 { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0; padding: 10px 14px; font-size: 14px; background: #253340; cursor: grab; }
+    .window > h2 button { padding: 0 8px; }
+    .content { padding: 14px; }
+    form { display: grid; gap: 12px; }
+    label { display: grid; gap: 4px; }
+    .row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .row label, label.check { display: flex; align-items: center; gap: 6px; }
     input, select, button { font: inherit; }
-    input:not([type=checkbox]), select, button { padding: 0.45rem 0.65rem; border: 1px solid #59666f; border-radius: 0.35rem; }
+    input:not([type=checkbox]), select, button { padding: 6px 9px; border: 1px solid #526779; border-radius: 4px; background: #15212b; color: inherit; }
+    input:not([type=checkbox]), select { width: 100%; }
     button { cursor: pointer; }
-    button[type=submit] { background: #f2a044; color: #18100a; border-color: #f2a044; font-weight: 600; }
-    output { min-height: 1.5em; }
-    output[data-error] { color: #ffad9b; }
+    button.primary { background: #a8d5f1; color: #10202d; border-color: #a8d5f1; font-weight: 600; }
+    button:disabled { opacity: 0.45; cursor: default; }
+    output, .muted { color: #a8b9c7; }
+    #notice { min-height: 24px; padding: 0 24px; }
+    #notice[data-error] { color: #ffb0a5; }
+    .tree { margin-top: 12px; overflow: auto; max-height: 390px; }
+    .tree button { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; padding: 5px 8px; background: transparent; }
+    .tree button:hover { background: #253340; }
+    .tree button.selected { background: #34546b; }
+    .tree small { color: #9db3c3; }
+    #widget-summary { white-space: pre-wrap; overflow-wrap: anywhere; }
+    fieldset { margin: 12px 0; padding: 12px; border: 1px solid #3b5163; }
+    fieldset:disabled { opacity: 0.55; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { text-align: left; vertical-align: top; padding: 6px; border-bottom: 1px solid #344858; overflow-wrap: anywhere; }
+    th { color: #a8b9c7; }
+    .metrics { display: flex; flex-wrap: wrap; gap: 28px; margin: 16px 0; }
+    .metric strong { display: block; font-size: 24px; }
+    #events { height: 300px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.6 monospace; }
+    footer { padding: 8px 24px 24px; color: #a8b9c7; }
+    @media (max-width: 850px) { .window { width: 100%; } header { padding: 12px 16px; } .workspace { padding: 12px; } }
   </style>
 </head>
 <body>
-  <main>
-    <h1>PunchOut UI Preview</h1>
-    <p>Press Play in Unreal Editor to edit the running game UI. When PIE is stopped, open PunchOut UI Preview to test sample data in its own tab.</p>
-    <form>
-      <label>Screen
-        <select name="screen">
-          <option value="MainMenu">Main menu</option>
-          <option value="Lobby">Lobby</option>
-          <option value="Playing">HUD</option>
-          <option value="PauseMenu">Pause menu</option>
-        </select>
-      </label>
-      <label>Player count <input name="playerCount" type="number" min="0" max="999" required></label>
-      <div class="row">
-        <label><input name="isHost" type="checkbox"> Host</label>
-        <label><input name="isConnecting" type="checkbox"> Connecting</label>
+  <header><h1>Runtime Debug Toolkit</h1><span id="connection">Connecting to Unreal…</span></header>
+  <nav id="window-menu" aria-label="Debug windows"></nav>
+  <p id="notice" role="status"></p>
+  <main class="workspace">
+    <section class="window" id="hierarchy-window" data-title="UMG Hierarchy" data-category="Systems">
+      <h2 draggable="true"><span>UMG Hierarchy</span><button data-close aria-label="Close UMG hierarchy">×</button></h2>
+      <div class="content">
+        <label>Find widget or class <input id="widget-search" type="search"></label>
+        <p class="muted" id="world-label">Start Play in Unreal Editor.</p>
+        <div class="tree" id="widget-tree"></div>
       </div>
-      <label>Status text <input name="status" maxlength="256"></label>
-      <label>HUD posture <input name="posture" maxlength="128"></label>
-      <div class="row">
-        <button type="submit">Apply</button>
-        <button type="button" id="reset">Reset</button>
+    </section>
+    <section class="window" id="widget-window" data-title="Widget Inspector" data-category="Systems">
+      <h2 draggable="true"><span>Widget Inspector</span><button data-close aria-label="Close widget inspector">×</button></h2>
+      <div class="content">
+        <p id="widget-summary">Select a widget from the running game.</p>
+        <label class="check"><input id="highlight" type="checkbox" checked> Highlight in game</label>
+        <label class="check"><input id="allow-edits" type="checkbox"> Allow display property edits</label>
+        <form id="widget-form">
+          <fieldset id="widget-fields" disabled>
+            <label>Visibility <select name="visibility">
+              <option>Visible</option><option>Collapsed</option><option>Hidden</option>
+              <option>HitTestInvisible</option><option>SelfHitTestInvisible</option>
+            </select></label>
+            <label class="check"><input name="enabled" type="checkbox"> Enabled</label>
+            <label>Render opacity <input name="opacity" type="number" min="0" max="1" step="0.05" required></label>
+            <button class="primary" type="submit">Apply to selected widget</button>
+          </fieldset>
+        </form>
+        <label>Find property <input id="property-search" type="search"></label>
+        <table><thead><tr><th>Property / type</th><th>Current value</th></tr></thead><tbody id="properties"></tbody></table>
       </div>
-      <output role="status"></output>
-    </form>
+    </section>
+    <section class="window" id="state-window" data-title="UI State" data-category="Gameplay">
+      <h2 draggable="true"><span>UI State</span><button data-close aria-label="Close UI state">×</button></h2>
+      <div class="content">
+        <form id="state-form">
+          <label>Screen <select name="screen">
+            <option value="MainMenu">Main menu</option><option value="Lobby">Lobby</option>
+            <option value="Playing">HUD</option><option value="PauseMenu">Pause menu</option>
+          </select></label>
+          <label>Player count <input name="playerCount" type="number" min="0" max="999" value="0" required></label>
+          <div class="row">
+            <label><input name="isHost" type="checkbox"> Host</label>
+            <label><input name="isConnecting" type="checkbox"> Connecting</label>
+          </div>
+          <label>Status <input name="status" maxlength="256"></label>
+          <label>HUD posture <input name="posture" maxlength="128"></label>
+          <div class="row">
+            <button class="primary" type="submit">Apply UI state</button>
+            <button type="button" id="reset-state">Reset to game state</button>
+            <button type="button" id="export-state">Export JSON</button>
+          </div>
+          <label>Import UI state JSON <input id="import-state" type="file" accept=".json,application/json"></label>
+          <output id="state-status"></output>
+        </form>
+      </div>
+    </section>
+    <section class="window" id="performance-window" data-title="Performance" data-category="Performance">
+      <h2 draggable="true"><span>Performance</span><button data-close aria-label="Close performance">×</button></h2>
+      <div class="content">
+        <div class="metrics">
+          <div class="metric">Frame time<strong id="frame-ms">—</strong>ms</div>
+          <div class="metric">Frame rate<strong id="fps">—</strong>FPS</div>
+          <div class="metric">Process physical memory<strong id="memory">—</strong>MiB</div>
+        </div>
+        <p class="muted">Application delta time sampled once per second. Process memory includes Unreal Editor during PIE.</p>
+        <button id="export-csv">Export performance CSV</button>
+      </div>
+    </section>
+    <section class="window" id="events-window" data-title="Input & Events" data-category="Debug">
+      <h2 draggable="true"><span>Input &amp; Events</span><button data-close aria-label="Close input and events">×</button></h2>
+      <div class="content">
+        <div class="row">
+          <label><input id="record-input" type="checkbox"> Record game input</label>
+          <label><input id="pause-log" type="checkbox"> Pause display</label>
+          <button id="clear-log">Clear</button><button id="copy-log">Copy</button>
+        </div>
+        <label>Find event <input id="event-search" type="search"></label>
+        <pre id="events"></pre>
+        <p class="muted">Latest 256 events. Input entries include the Slate handler and handling result available to Unreal.</p>
+      </div>
+    </section>
   </main>
+  <footer>Drag window titles to reorder. Resize from the lower-right corner. Window layout is saved in this browser.</footer>
   <script>
-    const form = document.querySelector('form');
-    const fields = form.elements;
-    const output = document.querySelector('output');
-    async function sync(method = 'GET', state) {
-      output.removeAttribute('data-error');
-      output.textContent = 'Connecting to Unreal…';
-      for (const button of form.querySelectorAll('button')) button.disabled = true;
-      try {
+    const endpoint = '/punchout-ui';
+    const notice = document.querySelector('#notice');
+    const stateForm = document.querySelector('#state-form');
+    const widgetForm = document.querySelector('#widget-form');
+    const workspace = document.querySelector('.workspace');
+    const samples = [];
+    let latestSnapshot = null;
+    let stateDirty = false;
+    let stateTarget = '';
+    let selectedId = '';
+    let transport = Promise.resolve();
+
+    function report(message, error = false) {
+      notice.textContent = message;
+      notice.toggleAttribute('data-error', error);
+    }
+
+    function api(path, method = 'GET', body) {
+      const result = transport.then(async () => {
         const options = { method, cache: 'no-store' };
-        if (state) {
+        if (body) {
           options.headers = { 'Content-Type': 'application/json' };
-          options.body = JSON.stringify(state);
+          options.body = JSON.stringify(body);
         }
-        const response = await fetch('/punchout-ui/state', options);
-        if (response.status === 409) throw new Error('Start Play in Editor or open PunchOut UI Preview, then reload this page.');
-        if (!response.ok) throw new Error('Preview request failed (' + response.status + ').');
-        const { target, ...values } = await response.json();
-        for (const [name, value] of Object.entries(values)) {
-          if (typeof value === 'boolean') fields[name].checked = value;
-          else fields[name].value = value;
+        const response = await fetch(endpoint + path, options);
+        if (!response.ok) {
+          const message = response.status === 409 ? 'Start Play in Unreal Editor to connect to the game UI.' :
+            response.status === 404 ? 'This widget was removed. Select another widget.' :
+            'Unreal rejected this request (' + response.status + ').';
+          throw new Error(message);
         }
-        const label = target === 'live' ? 'Live game UI' : 'Editor preview';
-        output.textContent = label + (method === 'POST' ? ' · Applied' : method === 'DELETE' ? ' · Reset' : ' · Connected');
-      } catch (error) {
-        output.setAttribute('data-error', '');
-        output.textContent = error.message;
-      } finally {
-        for (const button of form.querySelectorAll('button')) button.disabled = false;
+        return response.json();
+      });
+      transport = result.catch(() => {});
+      return result;
+    }
+
+    async function action(body) {
+      try {
+        renderSnapshot(await api('/inspect', 'POST', body));
+        report('Applied to the running game.');
+      } catch (error) { report(error.message, true); }
+    }
+
+    function fillState(state) {
+      stateTarget = state.target;
+      for (const name of ['screen', 'playerCount', 'isHost', 'isConnecting', 'status', 'posture']) {
+        const field = stateForm.elements[name];
+        if (typeof state[name] === 'boolean') field.checked = state[name];
+        else field.value = state[name];
+      }
+      stateDirty = false;
+      document.querySelector('#state-status').textContent = state.target === 'live' ? 'Live game UI' : 'Editor preview';
+    }
+
+    function readState() {
+      const fields = stateForm.elements;
+      return {
+        screen: fields.screen.value, playerCount: fields.playerCount.valueAsNumber,
+        isHost: fields.isHost.checked, isConnecting: fields.isConnecting.checked,
+        status: fields.status.value, posture: fields.posture.value
+      };
+    }
+
+    stateForm.addEventListener('input', () => { stateDirty = true; });
+    stateForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        fillState(await api('/state', 'POST', readState()));
+        report('UI state applied to ' + (stateTarget === 'live' ? 'the running game.' : 'the editor preview.'));
+      } catch (error) { report(error.message, true); }
+    });
+    document.querySelector('#reset-state').addEventListener('click', async () => {
+      try { fillState(await api('/state', 'DELETE')); report('Restored the current game state.'); }
+      catch (error) { report(error.message, true); }
+    });
+
+    function download(name, content, type) {
+      const url = URL.createObjectURL(new Blob([content], { type }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    document.querySelector('#export-state').addEventListener('click', () => {
+      download('ui-state.json', JSON.stringify(readState(), null, 2), 'application/json');
+    });
+    document.querySelector('#import-state').addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        if (file.size > 4096) throw new Error('UI state JSON must be at most 4 KiB.');
+        const value = JSON.parse(await file.text());
+        const comparison = JSON.stringify({ before: readState(), after: value }, null, 2);
+        if (window.confirm('Apply these UI state changes to the game?\n\n' + comparison)) {
+          fillState(await api('/state', 'POST', value));
+          report('Imported UI state.');
+        }
+      } catch (error) { report(error.message, true); }
+      event.target.value = '';
+    });
+
+    function renderTree() {
+      const host = document.querySelector('#widget-tree');
+      const scroll = host.scrollTop;
+      host.replaceChildren();
+      const filter = document.querySelector('#widget-search').value.toLowerCase();
+      function matches(node) {
+        return (node.name + ' ' + node.class).toLowerCase().includes(filter) || node.children.some(matches);
+      }
+      function append(node, depth) {
+        if (filter && !matches(node)) return;
+        const button = document.createElement('button');
+        button.style.paddingLeft = (8 + depth * 16) + 'px';
+        button.classList.toggle('selected', node.id === selectedId);
+        const label = document.createElement('span');
+        label.textContent = node.name + ' ';
+        const type = document.createElement('small');
+        type.textContent = node.class;
+        button.append(label, type);
+        button.addEventListener('click', () => {
+          document.querySelector('#allow-edits').checked = false;
+          action({ action: 'select', id: node.id, highlight: document.querySelector('#highlight').checked });
+        });
+        host.append(button);
+        for (const child of node.children) append(child, depth + 1);
+      }
+      for (const root of latestSnapshot?.widgets || []) append(root, 0);
+      host.scrollTop = scroll;
+    }
+
+    function renderProperties() {
+      const host = document.querySelector('#properties');
+      host.replaceChildren();
+      const filter = document.querySelector('#property-search').value.toLowerCase();
+      for (const property of latestSnapshot?.selected?.properties || []) {
+        if (!(property.name + ' ' + property.type).toLowerCase().includes(filter)) continue;
+        const row = document.createElement('tr');
+        for (const value of [property.name + ' / ' + property.type, property.value]) {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.append(cell);
+        }
+        host.append(row);
       }
     }
 
-    fields.playerCount.value = 0;
-    form.addEventListener('submit', (event) => {
+    function renderLog() {
+      if (document.querySelector('#pause-log').checked) return;
+      const filter = document.querySelector('#event-search').value.toLowerCase();
+      const host = document.querySelector('#events');
+      host.textContent = (latestSnapshot?.events || []).filter(line => line.toLowerCase().includes(filter)).join('\n');
+    }
+
+    function renderSnapshot(snapshot) {
+      latestSnapshot = snapshot;
+      const selected = snapshot.selected;
+      const changedSelection = selectedId !== (selected?.id || '');
+      selectedId = selected?.id || '';
+      if (changedSelection) document.querySelector('#allow-edits').checked = false;
+      document.querySelector('#widget-fields').disabled = !selected || !document.querySelector('#allow-edits').checked;
+      document.querySelector('#world-label').textContent = snapshot.world || 'Start Play to inspect the game hierarchy.';
+      document.querySelector('#record-input').checked = snapshot.recordInput;
+      document.querySelector('#widget-summary').textContent = selected ?
+        selected.name + '\n' + selected.class + '\nPosition  ' + selected.position.join(', ') +
+        '\nSize  ' + selected.size.join(', ') + '\nTranslation  ' + selected.translation.join(', ') +
+        '\nScale  ' + selected.scale.join(', ') + '\nAngle  ' + selected.angle :
+        'Select a widget from the running game.';
+      if (selected && (changedSelection || !widgetForm.contains(document.activeElement))) {
+        widgetForm.elements.visibility.value = selected.visibility;
+        widgetForm.elements.opacity.value = Number(selected.opacity.toFixed(4));
+        widgetForm.elements.enabled.checked = selected.enabled;
+      }
+      document.querySelector('#frame-ms').textContent = snapshot.frameMs.toFixed(2);
+      document.querySelector('#fps').textContent = snapshot.frameMs > 0 ? (1000 / snapshot.frameMs).toFixed(1) : '—';
+      document.querySelector('#memory').textContent = snapshot.memoryMiB.toFixed(1);
+      renderTree();
+      renderProperties();
+      renderLog();
+    }
+
+    widgetForm.addEventListener('submit', (event) => {
       event.preventDefault();
-      sync('POST', {
-        screen: fields.screen.value,
-        playerCount: fields.playerCount.valueAsNumber,
-        isHost: fields.isHost.checked,
-        isConnecting: fields.isConnecting.checked,
-        status: fields.status.value,
-        posture: fields.posture.value
+      if (!selectedId || !document.querySelector('#allow-edits').checked) return;
+      action({
+        action: 'edit', id: selectedId, confirmed: true,
+        highlight: document.querySelector('#highlight').checked,
+        visibility: widgetForm.elements.visibility.value, enabled: widgetForm.elements.enabled.checked,
+        opacity: widgetForm.elements.opacity.valueAsNumber
       });
     });
-    document.querySelector('#reset').addEventListener('click', () => sync('DELETE'));
-    sync();
+    document.querySelector('#allow-edits').addEventListener('change', (event) => {
+      document.querySelector('#widget-fields').disabled = !selectedId || !event.target.checked;
+    });
+    document.querySelector('#highlight').addEventListener('change', (event) => {
+      if (selectedId) action({ action: 'select', id: selectedId, highlight: event.target.checked });
+    });
+    document.querySelector('#record-input').addEventListener('change', (event) => action({ action: 'record', enabled: event.target.checked }));
+    document.querySelector('#clear-log').addEventListener('click', () => action({ action: 'clear' }));
+    document.querySelector('#copy-log').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(document.querySelector('#events').textContent); report('Copied the event log.'); }
+      catch (error) { report(error.message, true); }
+    });
+    document.querySelector('#widget-search').addEventListener('input', renderTree);
+    document.querySelector('#property-search').addEventListener('input', renderProperties);
+    document.querySelector('#event-search').addEventListener('input', renderLog);
+    document.querySelector('#pause-log').addEventListener('change', renderLog);
+    document.querySelector('#export-csv').addEventListener('click', () => {
+      const rows = ['timestamp,frame_ms,fps,process_memory_mib'];
+      for (const sample of samples) rows.push(sample.join(','));
+      download('runtime-performance.csv', rows.join('\n'), 'text/csv');
+    });
+
+    const registered = new Map();
+    const layoutKey = 'RuntimeDebugToolkit.layout.v1';
+    function saveLayout() {
+      const layout = [...workspace.children].map(element => ({
+        id: element.id, hidden: element.hidden, width: element.style.width, height: element.style.height
+      }));
+      try { localStorage.setItem(layoutKey, JSON.stringify(layout)); } catch {}
+    }
+    function rebuildMenu() {
+      const menu = document.querySelector('#window-menu');
+      menu.replaceChildren();
+      for (const category of [...new Set([...registered.values()].map(item => item.category))]) {
+        const group = document.createElement('details');
+        const title = document.createElement('summary');
+        title.textContent = category;
+        const items = document.createElement('div');
+        for (const item of registered.values()) {
+          if (item.category !== category) continue;
+          const button = document.createElement('button');
+          button.textContent = item.title;
+          button.addEventListener('click', () => {
+            item.element.hidden = !item.element.hidden;
+            group.open = false;
+            saveLayout();
+          });
+          items.append(button);
+        }
+        group.append(title, items);
+        menu.append(group);
+      }
+    }
+    let layoutTimer;
+    const resizeObserver = new ResizeObserver(() => {
+      clearTimeout(layoutTimer);
+      layoutTimer = setTimeout(saveLayout, 250);
+    });
+    window.RuntimeDebugToolkit = {
+      registerWindow(item) {
+        if (!item.id || registered.has(item.id)) throw new Error('Debug window ID must be unique.');
+        item.element.id = item.id;
+        registered.set(item.id, item);
+        workspace.append(item.element);
+        resizeObserver.observe(item.element);
+        rebuildMenu();
+      },
+      unregisterWindow(id) {
+        const item = registered.get(id);
+        if (!item) return false;
+        resizeObserver.unobserve(item.element);
+        item.element.remove();
+        registered.delete(id);
+        rebuildMenu();
+        saveLayout();
+        return true;
+      }
+    };
+    for (const element of [...workspace.children]) {
+      window.RuntimeDebugToolkit.registerWindow({
+        id: element.id, title: element.dataset.title, category: element.dataset.category, element
+      });
+    }
+    try {
+      for (const item of JSON.parse(localStorage.getItem(layoutKey) || '[]')) {
+        const element = registered.get(item.id)?.element;
+        if (!element) continue;
+        element.hidden = Boolean(item.hidden);
+        element.style.width = item.width || '';
+        element.style.height = item.height || '';
+        workspace.append(element);
+      }
+    } catch {}
+    let dragged = null;
+    workspace.addEventListener('click', (event) => {
+      if (!event.target.closest('[data-close]')) return;
+      event.target.closest('.window').hidden = true;
+      saveLayout();
+    });
+    workspace.addEventListener('dragstart', (event) => {
+      if (!event.target.closest('h2')) return;
+      dragged = event.target.closest('.window');
+      event.dataTransfer.setData('text/plain', dragged.id);
+    });
+    workspace.addEventListener('dragover', (event) => { if (dragged) event.preventDefault(); });
+    workspace.addEventListener('drop', (event) => {
+      event.preventDefault();
+      const target = event.target.closest('.window');
+      if (dragged && target && dragged !== target) workspace.insertBefore(dragged, target);
+      dragged = null;
+      saveLayout();
+    });
+    workspace.addEventListener('dragend', () => { dragged = null; });
+
+    async function poll() {
+      if (!document.hidden) {
+        try {
+          const snapshot = await api('/inspect');
+          renderSnapshot(snapshot);
+          samples.push([new Date().toISOString(), snapshot.frameMs.toFixed(3),
+            snapshot.frameMs > 0 ? (1000 / snapshot.frameMs).toFixed(2) : 0, snapshot.memoryMiB.toFixed(2)]);
+          if (samples.length > 300) samples.shift();
+          try {
+            const state = await api('/state');
+            if (!stateDirty || stateTarget !== state.target) fillState(state);
+            document.querySelector('#connection').textContent = state.target === 'live' ? 'Live game UI · ' + snapshot.world : 'Editor preview';
+          } catch (error) {
+            document.querySelector('#connection').textContent = snapshot.world ? 'Live UMG inspector' : 'Waiting for Play in Unreal Editor';
+          }
+        } catch (error) {
+          document.querySelector('#connection').textContent = 'Disconnected · retrying';
+          report(error.message, true);
+        }
+      }
+      setTimeout(poll, 1000);
+    }
+    poll();
   </script>
 </body>
 </html>

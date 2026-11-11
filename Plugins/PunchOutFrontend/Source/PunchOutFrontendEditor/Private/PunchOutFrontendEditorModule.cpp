@@ -1,5 +1,6 @@
 #include "PunchOutUIView.h"
 #include "PunchOutViewModel.h"
+#include "RuntimeDebugWebInspector.h"
 
 #include "Dom/JsonObject.h"
 #include "Editor.h"
@@ -145,6 +146,7 @@ public:
 		{
 			if (PageRoute) Router->UnbindRoute(PageRoute);
 			if (StateRoute) Router->UnbindRoute(StateRoute);
+			if (InspectorRoute) Router->UnbindRoute(InspectorRoute);
 		}
 	}
 
@@ -162,6 +164,7 @@ private:
 		bPlayInEditor = false;
 		if (auto* View = LiveDebugView.Get()) View->SetDebugViewModel(nullptr);
 		LiveDebugView.Reset();
+		WebInspector.Reset();
 	}
 
 	TSharedRef<SDockTab> SpawnPreview(const FSpawnTabArgs&)
@@ -199,6 +202,9 @@ private:
 		StateRoute = Router->BindRoute(FHttpPath(TEXT("/punchout-ui/state")),
 			EHttpServerRequestVerbs::VERB_GET | EHttpServerRequestVerbs::VERB_POST | EHttpServerRequestVerbs::VERB_DELETE,
 			FHttpRequestHandler::CreateRaw(this, &ThisClass::ServeState));
+		InspectorRoute = Router->BindRoute(FHttpPath(TEXT("/punchout-ui/inspect")),
+			EHttpServerRequestVerbs::VERB_GET | EHttpServerRequestVerbs::VERB_POST,
+			FHttpRequestHandler::CreateRaw(this, &ThisClass::ServeInspector));
 		UE_LOG(LogTemp, Display, TEXT("PunchOut UI Preview controls: http://127.0.0.1:8088/punchout-ui"));
 	}
 
@@ -257,6 +263,7 @@ private:
 				LiveDebugView = GameView;
 				Model = Target;
 			}
+			WebInspector.Record(TEXT("UI state applied  ") + StaticEnum<EPunchOutScreen>()->GetNameStringByValue(static_cast<int64>(Model->Screen)));
 		}
 		else if (Request.Verb == EHttpServerRequestVerbs::VERB_DELETE)
 		{
@@ -276,11 +283,26 @@ private:
 				Model->SetStatus(Defaults->Status);
 				Model->SetPosture(Defaults->Posture);
 			}
+			WebInspector.Record(TEXT("UI state restored"));
 		}
 		Reply(FHttpServerResponse::Create(ReadState(*Model, GameView != nullptr), TEXT("application/json")));
 		return true;
 	}
 
+	bool ServeInspector(const FHttpServerRequest& Request, const FHttpResultCallback& Reply)
+	{
+		if (!IsLocalRequest(Request))
+		{
+			Reply(FHttpServerResponse::Error(EHttpServerResponseCodes::Forbidden));
+			return true;
+		}
+		auto* View = bPlayInEditor ? FindGameView() : nullptr;
+		UWorld* World = View ? View->GetWorld() : (bPlayInEditor && GEditor ? GEditor->PlayWorld.Get() : nullptr);
+		Reply(WebInspector.Handle(Request, World));
+		return true;
+	}
+
+	FRuntimeDebugWebInspector WebInspector;
 	IConsoleObject* OpenCommand = nullptr;
 	TWeakPtr<SDockTab> PreviewTab;
 	TWeakObjectPtr<UPunchOutViewModel> PreviewModel;
@@ -289,6 +311,7 @@ private:
 	TSharedPtr<IHttpRouter> Router;
 	FHttpRouteHandle PageRoute;
 	FHttpRouteHandle StateRoute;
+	FHttpRouteHandle InspectorRoute;
 };
 
 IMPLEMENT_MODULE(FPunchOutFrontendEditorModule, PunchOutFrontendEditor)
